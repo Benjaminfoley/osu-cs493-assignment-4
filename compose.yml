@@ -34,3 +34,25 @@ services:
       - db
       - db-init
     restart: on-failure
+
+    rabbit-mq:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+
+    rabbit-consumer:
+    build: .
+    environment:
+      RABBITMQ_HOST: rabbit-mq
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+    depends_on:
+      - rabbit-mq
+      - db
+      - db-init
+    restart: on-failure
+    command: npm run consumer
