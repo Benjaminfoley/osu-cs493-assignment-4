@@ -4,6 +4,8 @@
 
 const { Router } = require('express')
 const multer = require('multer')
+const crypto = require('crypto')
+const fs = require('fs')
 
 
 const { validateAgainstSchema } = require('../lib/validation')
@@ -19,6 +21,22 @@ const imageTypes = {
   'image/jpeg':'jpg', 
   'image/png':'png',
 }
+/*
+* This is a function to Upload a file in the server
+*/
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: `${__dirname}/uploads`,
+    filename: (req, file, callback) => {
+      const filename = crypto.pseudoRandomBytes(16).toString('hex')
+      const extension = imageTypes[file.mimetype]
+      callback(null, `${filename}.${extension}`)
+    }
+  }),
+  fileFilter: (req, file, callback) => {
+    callback(null, !!imageTypes[file.mimetype])
+  }
+})
 
 /*
  * POST /photos - Route to create a new photo.
