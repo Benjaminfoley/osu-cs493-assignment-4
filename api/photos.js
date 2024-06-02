@@ -39,6 +39,22 @@ const upload = multer({
 })
 
 /*
+  * Remove a photo from the server
+*/
+function removeUploadedFile(file) {
+  return new Promise((resolve, reject) => {
+    fs.unlink(file.path, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+
+}
+
+/*
  * POST /photos - Route to create a new photo.
  */
 router.post('/', async (req, res) => {
