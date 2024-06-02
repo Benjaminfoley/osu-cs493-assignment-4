@@ -3,6 +3,8 @@
  */
 
 const { Router } = require('express')
+const multer = require('multer')
+
 
 const { validateAgainstSchema } = require('../lib/validation')
 const {
@@ -12,6 +14,11 @@ const {
 } = require('../models/photo')
 
 const router = Router()
+
+const imageTypes = {
+  'image/jpeg':'jpg', 
+  'image/png':'png',
+}
 
 /*
  * POST /photos - Route to create a new photo.
