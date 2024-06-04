@@ -113,11 +113,11 @@ router.post('/', async,upload.single('image'), (req, res,next) => {
     contentType: req.file.mimetype,
     filename: req.file.filename,
     path: req.file.path,
-    userId: req.body.userId
+    businessId: req.body.businessIdId
   }
   try {
     const id = await saveImageFile(image);
-    await removeUploadedFile(req.file);
+    const remove = await removeUploadedFile(req.file);
   } catch (err) {
     console.error(err)
     res.status(500).send({
