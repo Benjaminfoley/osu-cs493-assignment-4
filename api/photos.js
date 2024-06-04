@@ -3,6 +3,7 @@
  */
 
 const { Router } = require('express')
+const {ObjectId} = require('mongodb')
 const multer = require('multer')
 const crypto = require('crypto')
 const fs = require('fs')
@@ -43,7 +44,6 @@ const upload = multer({
 */
 async function getImageInfoById(id) {
   const db = getDBReference();
-  const collection = db.collection('images');
   const bucket = new GridFSBucket(db, { bucketName: 'images' });
 
   if (!ObjectId.isValid(id)) {
@@ -63,7 +63,7 @@ function saveImageFile(image) {
     const bucket = new GridFSBucket(db, { bucketName: 'images' })
     const metadata = {
       contentType: image.contentType,
-      businessId: image.userId,
+      businessId: image.businessId,
     }
     const uploadStream = bucket.openUploadStream(
       image.filename,
@@ -108,16 +108,19 @@ function getImageDownloadStreamByFilename(filename) {
 /*
  * POST /photos - Route to create a new photo.
  */
-router.post('/', async,upload.single('image'), (req, res,next) => {
+router.post('/',upload.single('image'),async (req, res,next) => {
   const image = {
     contentType: req.file.mimetype,
     filename: req.file.filename,
     path: req.file.path,
-    businessId: req.body.businessIdId
+    businessId: req.body.businessId
   }
   try {
     const id = await saveImageFile(image);
     const remove = await removeUploadedFile(req.file);
+    res.status(201).send({
+      id: id
+    })
   } catch (err) {
     console.error(err)
     res.status(500).send({
