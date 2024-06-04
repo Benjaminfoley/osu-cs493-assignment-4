@@ -26,7 +26,7 @@ const imageTypes = {
 */
 const upload = multer({
   storage: multer.diskStorage({
-    destination: `${__dirname}/uploads`,
+  destination: `${__dirname}/uploads`,
     filename: (req, file, callback) => {
       const filename = crypto.pseudoRandomBytes(16).toString('hex')
       const extension = imageTypes[file.mimetype]
@@ -37,6 +37,47 @@ const upload = multer({
     callback(null, !!imageTypes[file.mimetype])
   }
 })
+
+/*
+  * Get a photo by its ID
+*/
+async function getImageInfoById(id) {
+  const db = getDBReference();
+  const collection = db.collection('images');
+  const bucket = new GridFSBucket(db, { bucketName: 'images' });
+
+  if (!ObjectId.isValid(id)) {
+    return null;
+  } else {
+    const results = await bucket.find({ _id: new ObjectId(id) }).toArray();;
+    return results[0];
+  }
+}
+
+/*
+  * Save an image file to the server
+*/
+function saveImageFile(image) {
+  return new Promise((resolve, reject) => {
+    const db = getDbReference()
+    const bucket = new GridFSBucket(db, { bucketName: 'images' })
+    const metadata = {
+      contentType: image.contentType,
+      businessId: image.userId,
+    }
+    const uploadStream = bucket.openUploadStream(
+      image.filename,
+      { metadata: metadata }
+    )
+    fs.createReadStream(image.path).pipe(uploadStream)
+    .on('error', (err) => {
+      reject(err)
+    })
+    .on('finish', (result) => {
+      resolve(result._id)
+  })
+}
+)}
 
 /*
   * Remove a photo from the server
@@ -51,30 +92,38 @@ function removeUploadedFile(file) {
       }
     });
   });
-
 }
+
+/*
+  * Get a photo by its filename
+*/
+function getImageDownloadStreamByFilename(filename) {
+  const db = getDBReference();
+  const bucket =
+    new GridFSBucket(db, { bucketName: 'images' });
+  return bucket.openDownloadStreamByName(filename);
+}
+
 
 /*
  * POST /photos - Route to create a new photo.
  */
-router.post('/', async (req, res) => {
-  if (validateAgainstSchema(req.body, PhotoSchema)) {
-    try {
-      const id = await insertNewPhoto(req.body)
-      res.status(201).send({
-        id: id,
-        links: {
-          photo: `/photos/${id}`,
-          business: `/businesses/${req.body.businessId}`
-        }
-      })
-    } catch (err) {
-      console.error(err)
-      res.status(500).send({
-        error: "Error inserting photo into DB.  Please try again later."
-      })
-    }
-  } else {
+router.post('/', async,upload.single('image'), (req, res,next) => {
+  const image = {
+    contentType: req.file.mimetype,
+    filename: req.file.filename,
+    path: req.file.path,
+    userId: req.body.userId
+  }
+  try {
+    const id = await saveImageFile(image);
+    await removeUploadedFile(req.file);
+  } catch (err) {
+    console.error(err)
+    res.status(500).send({
+      error: "Error inserting photo into DB.  Please try again later."
+    })
+  
     res.status(400).send({
       error: "Request body is not a valid photo object"
     })
