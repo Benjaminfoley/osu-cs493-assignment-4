@@ -3,7 +3,8 @@
  */
 
 const { Router } = require('express')
-const {ObjectId} = require('mongodb')
+const {ObjectId,GridFSBucket} = require('mongodb')
+const { getDbReference } = require('../lib/mongo')
 const multer = require('multer')
 const crypto = require('crypto')
 const fs = require('fs')
@@ -98,7 +99,7 @@ function removeUploadedFile(file) {
   * Get a photo by its filename
 */
 function getImageDownloadStreamByFilename(filename) {
-  const db = getDBReference();
+  const db = getDbReference();
   const bucket =
     new GridFSBucket(db, { bucketName: 'images' });
   return bucket.openDownloadStreamByName(filename);
@@ -109,12 +110,13 @@ function getImageDownloadStreamByFilename(filename) {
  * POST /photos - Route to create a new photo.
  */
 router.post('/',upload.single('image'),async (req, res,next) => {
-  const image = {
-    contentType: req.file.mimetype,
-    filename: req.file.filename,
-    path: req.file.path,
-    businessId: req.body.businessId
-  }
+  if (req.file && validateAgainstSchema(req.body, PhotoSchema)){
+    const image = {
+      contentType: req.file.mimetype,
+      filename: req.file.filename,
+      path: req.file.path,
+      businessId: req.body.businessId
+    }
   try {
     const id = await saveImageFile(image);
     const remove = await removeUploadedFile(req.file);
@@ -131,7 +133,9 @@ router.post('/',upload.single('image'),async (req, res,next) => {
       error: "Request body is not a valid photo object"
     })
   }
+}
 })
+
 
 /*
  * GET /photos/{id} - Route to fetch info about a specific photo.
